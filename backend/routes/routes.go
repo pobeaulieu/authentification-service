@@ -21,5 +21,9 @@ func Setup(app *fiber.App) {
 	app.Get("/api/getpasswordpolicy", controllers.GetPasswordPolicy)
 	app.Get("/api/getloginpolicy", controllers.GetLoginPolicy)
 	app.Post("/api/userrole", controllers.UserRole)
-
+	app.Post("/api/modifypassword", controllers.ModifyPassword)
+	app.Post("/api/block", controllers.Block)
+	app.Post("/api/login2fa", controllers.Login2FA)
+	app.Post("/api/activate2fa", controllers.Activate2FA)
+	app.Get("/api/getcode", controllers.GetCode)
 }

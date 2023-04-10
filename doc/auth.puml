@@ -1,0 +1,106 @@
+@startuml
+participant "authController.go" as c
+
+participant "database.go" as d
+
+
+participant "authentification.go" as a
+
+participant "user:*models.User" as u
+participant "loginPolicy:*models.LoginPolicy" as lp
+
+
+ -> c : Post /api/login 
+activate c
+    note left c
+    requestOptions = {
+            email: email,
+            passsword: password
+        }
+
+    end note
+
+c-> d : u = GetUserFromEmail(data["email"])
+note right d
+Access PostgreSQL database via gorm 
+DB.Where("email = ?", email).First(user)
+end note
+d -> u : 
+
+c -> d: loginPolicy = GetLoginPolicy(*user)
+note right d
+Access PostgreSQL database via gorm 
+DB.Where("id = ?", user.LoginPolicyId).First(policy)
+end note
+d->lp : 
+
+c -> a: Login(*user, *loginPolicy, data["password"])
+activate a
+alt time.Since(user.LastLoginAttempt) < time.Duration(loginPolicy.LoginTimeInterval)*time.Second
+  a-->c: err = Error("too short time interval between attempts")
+  
+  else user.Blocked == 1 || user.LoginAttemptCount > loginPolicy.MaxLoginAttemptCount
+  a -> u : user.LoginAttemptCount = user.LoginAttemptCount + 1
+    a-> u: user.Blocked = 1
+		
+	a-> u: user.LastLoginAttempt = time.Now()
+    a-->c: err = Error("The account is blocked. Please contact an administrator to unblock the account.")
+      else err := bcrypt.CompareHashAndPassword(user.Password, []byte(password)); err != nil
+      note right a
+      Hash algorithm: bcrypt
+      end note
+      a->u: user.LoginAttemptCount = user.LoginAttemptCount + 1
+		a->u: user.LastLoginAttempt = time.Now()
+    a-->c: err = Error("wrongPassword")
+      else lastPassword.CreatedTime.Before(time.Now().Add(-72 * time.Hour))
+      a->u: user.LastLoginAttempt = time.Time{}
+        a->u: user.LoginAttemptCount = 0
+		  a->u: user.Blocked = 2
+    a-->c: err = Error("change password, outdated")
+    
+else 
+a->u:user.LoginAttemptCount = 0
+a->u:user.LastLoginAttempt = time.Time{}
+a->u:user.Blocked = 0
+
+a--> c : err = nil
+
+end
+
+alt   if !loginPolicy.TwoFA 
+c-> a: GenerateJWT(*user, c* : fiber.Ctx)
+note right c 
+    the JWT is created if TwoFA is not actvated
+    If it is, it will be created at the second API route after code2FA validation
+end note 
+note right a
+    Create JWT:
+
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		Issuer:    strconv.Itoa(int(user.Id)),
+		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(), //JWT valide 1 heure
+	})
+
+	token, err := claims.SignedString([]byte(os.Getenv("SECRETKEY")))
+
+	cookie := fiber.Cookie{
+		Name:     "jwt",
+		Value:    token,
+		Expires:  time.Now().Add(time.Hour * 1),
+		HTTPOnly: true,
+	}
+end note
+end
+
+deactivate a
+c -> d: DB.Save(user)
+deactivate c
+
+note left c
+The cookie is returned 
+through the fiber context framework
+
+end note
+
+<-- c : 
+@enduml

@@ -16,8 +16,7 @@ func Unblock(c *fiber.Ctx) error {
 	}
 
 	id := data["id"]
-
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -27,9 +26,9 @@ func Unblock(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
-	// if doesnt have admin or business role, return an error
+	// Need admin role
 	if user.AdminRole == 0 {
 		c.Status(fiber.StatusUnauthorized)
 		utility.LogInfo(user.Name, "unauthorized")
@@ -39,7 +38,6 @@ func Unblock(c *fiber.Ctx) error {
 	}
 
 	var userToUnblock models.User
-	// get user
 	database.DB.Where("id = ?", id).First(&userToUnblock)
 
 	userToUnblock.Blocked = 0
@@ -48,6 +46,35 @@ func Unblock(c *fiber.Ctx) error {
 	database.DB.Save(&userToUnblock)
 
 	utility.LogInfo(user.Name, "unblocked")
+
+	return c.JSON(fiber.Map{
+		"message": "success",
+	})
+}
+
+func Block(c *fiber.Ctx) error {
+	var data map[string]string
+
+	if err := c.BodyParser(&data); err != nil {
+		return err
+	}
+
+	email := data["email"]
+
+	var userToBlock models.User
+
+	if err := database.DB.Where("email = ?", email).First(&userToBlock).Error; err != nil {
+		c.Status(fiber.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"message": "The email is not associated to an account. No account was blocked. ",
+		})
+	}
+
+	userToBlock.Blocked = 1
+
+	database.DB.Save(&userToBlock)
+
+	utility.LogInfo(userToBlock.Name, "blocked")
 
 	return c.JSON(fiber.Map{
 		"message": "success",
@@ -71,7 +98,7 @@ func MaxLoginAttempts(c *fiber.Ctx) error {
 		})
 	}
 
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -81,9 +108,9 @@ func MaxLoginAttempts(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
-	// if doesnt have admin or business role, return an error
+	// Need admin role
 	if user.AdminRole == 0 {
 		c.Status(fiber.StatusUnauthorized)
 		utility.LogInfo(user.Name, "unauthorized")
@@ -124,7 +151,7 @@ func LoginTimeInterval(c *fiber.Ctx) error {
 		})
 	}
 
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -134,9 +161,8 @@ func LoginTimeInterval(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
-	// if doesnt have admin or business role, return an error
 	if user.AdminRole == 0 {
 		c.Status(fiber.StatusUnauthorized)
 		utility.LogInfo(user.Name, "unauthorized")
@@ -160,8 +186,29 @@ func LoginTimeInterval(c *fiber.Ctx) error {
 	})
 }
 
+func Activate2FA(c *fiber.Ctx) error {
+	var data map[string]bool
+
+	if err := c.BodyParser(&data); err != nil {
+		return err
+	}
+
+	activate := data["activate"]
+
+	if err := database.DB.Model(&models.LoginPolicy{}).Where("id >= ?", 0).Update("two_fa", activate).Error; err != nil {
+		c.Status(fiber.StatusInternalServerError)
+		return c.JSON(fiber.Map{
+			"message": "could not save the new time interval",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "success",
+	})
+}
+
 func PasswordPolicy(c *fiber.Ctx) error {
-	token, err1 := VerifyAuthentification(c)
+	token, err1 := utility.VerifyAuth(c)
 
 	if err1 != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -171,9 +218,8 @@ func PasswordPolicy(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
-	// if doesnt have admin or business role, return an error
 	if user.AdminRole == 0 {
 		c.Status(fiber.StatusUnauthorized)
 		utility.LogInfo(user.Name, "unauthorized")
@@ -190,7 +236,7 @@ func PasswordPolicy(c *fiber.Ctx) error {
 	}
 
 	var policy models.PasswordPolicy
-	// get user
+
 	database.DB.Where("id = ?", 1).First(&policy)
 
 	if newPolicy.MinLength != nil {
@@ -224,7 +270,7 @@ func PasswordPolicy(c *fiber.Ctx) error {
 
 func GetPasswordPolicy(c *fiber.Ctx) error {
 
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -234,7 +280,7 @@ func GetPasswordPolicy(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
 	// if doesnt have admin or business role, return an error
 	if user.AdminRole == 0 {
@@ -256,38 +302,15 @@ func GetPasswordPolicy(c *fiber.Ctx) error {
 
 func GetLoginPolicy(c *fiber.Ctx) error {
 
-	token, err := VerifyAuthentification(c)
-
-	if err != nil {
-		c.Status(fiber.StatusUnauthorized)
-		utility.LogInfo("admin", "unauthenticated")
-		return c.JSON(fiber.Map{
-			"message": "unauthenticated",
-		})
-	}
-
-	user := getUserFromToken(token)
-
-	// if doesnt have admin or business role, return an error
-	if user.AdminRole == 0 {
-		c.Status(fiber.StatusUnauthorized)
-		utility.LogInfo(user.Name, "unauthorized")
-		return c.JSON(fiber.Map{
-			"message": "the user does not have a valid admin role",
-		})
-	}
-
 	var policy models.LoginPolicy
 	// get user
 	database.DB.Where("id = ?", 1).First(&policy)
-
-	utility.LogInfo(user.Name, "getLoginPolicy")
 
 	return c.JSON(policy)
 }
 
 func UserRole(c *fiber.Ctx) error {
-	token, err1 := VerifyAuthentification(c)
+	token, err1 := utility.VerifyAuth(c)
 
 	if err1 != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -297,7 +320,7 @@ func UserRole(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
 	// if doesnt have admin or business role, return an error
 	if user.AdminRole == 0 {

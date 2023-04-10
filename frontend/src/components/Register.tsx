@@ -4,40 +4,67 @@ const Register = (props: { onSubmit: any}) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [message, setMessage] = useState('');
 
     const submit = async (e: SyntheticEvent) => {
         e.preventDefault();
 
-        await fetch('http://localhost:8000/api/register', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                name,
-                email,
-                password
-            })
-        });
+        if (password !== confirmPassword)
+            setMessage("Le nouveau mot de passe ne correspond pas");
+        else {
+            const response = await fetch('https://localhost:8000/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password
+                })
+            });
 
-        props.onSubmit();
+            const content = await response.json();
+            if (content.id !== undefined){
+                props.onSubmit();
+            } else {
+                setMessage(content.message);
+            }
+        }
     }
 
     return (
         <form onSubmit={submit}>
-            <h1 className="h3 mb-3 fw-normal">Créer un compte</h1>
-
-            <input className="form-control" placeholder="Nom d'utilisateur" required
+            <div className="form-group">
+                <label htmlFor="name">Nom d'utilisateur</label><br />
+            <input className="form-control" name="name" placeholder="Nom d'utilisateur" required
                    onChange={e => setName(e.target.value)}
             />
+            </div><br />
 
-            <input type="email" className="form-control" placeholder="Courriel" required
+            <div className="form-group">
+                <label htmlFor="email">Adresse courriel</label><br />
+            <input type="email" className="form-control" name="email" placeholder="Courriel" required
                    onChange={e => setEmail(e.target.value)}
             />
+            </div><br />
 
-            <input type="password" className="form-control" placeholder="Mot de passe" required
+            <div className="form-group">
+                <label htmlFor="password">Mot de passe</label><br />
+            <input type="password" className="form-control" name="password" placeholder="Mot de passe" required
                    onChange={e => setPassword(e.target.value)}
             />
+            </div><br />
+
+            <div className="form-group">
+                <label htmlFor="confirmPassword">Confirmer nouveau mot de passe</label><br />
+                <input type="password" className="form-control" name='confirmPassword' placeholder="Confirmer nouveau mot de passe" required
+                   onChange={e => setConfirmPassword(e.target.value)}
+                />
+            </div><br />
 
             <button className="w-100 btn btn-lg btn-primary" type="submit">Soumettre</button>
+            <p style={{color: 'red'}}>{message}</p>
         </form>
     );
 };

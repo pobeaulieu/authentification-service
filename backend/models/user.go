@@ -18,7 +18,5 @@ type User struct {
 	Blocked           uint      `json:"blocked"`
 	PasswordPolicyId  uint      `json:"-" gorm:"default:1;foreignKey:id"`
 	LoginPolicyId     uint      `json:"-" gorm:"default:1;foreignKey:id"`
-
-	// TODO password policy history. voir si on peut utiliser marshal et stocker un string car 2d array pas supporté par DB
-	// History              [][]byte  `json:"-"`
+	PasswordHistoryId uint      `json:"-" gorm:"default:1;foreignKey:id"`
 }

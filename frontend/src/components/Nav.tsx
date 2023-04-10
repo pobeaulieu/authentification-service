@@ -1,5 +1,3 @@
-import React from 'react';
-import PropTypes from 'prop-types';
 import {Link} from "react-router-dom";
 
 const Nav = (props: any) => {
@@ -28,16 +26,21 @@ const Nav = (props: any) => {
          <nav className="navbar navbar-expand-md navbar-dark bg-dark mb-4" >
             <div className="container-fluid">
                 <Link to="/" className="navbar-brand">Accueil</Link>
-                { props.loggedUser.adminRole === 1 ? (
+                { props.loggedUser.adminRole === 1 && props.loggedUser.blocked === 0? (
                     <>  
                     <Link to="/administration" className="navbar-brand">Administration</Link>
                     <Link to="/clients/business" className="navbar-brand">Clients Affaires</Link>
                     <Link to="/clients/residential" className="navbar-brand">Clients Résidentiels</Link>
                     <Link to="/users" className="navbar-brand">Utilisateurs</Link>
                     </>
-                ): props.loggedUser.businessRole === 1 ? (
+                ): props.loggedUser.businessRole === 1 && props.loggedUser.residentialRole === 1 && props.loggedUser.blocked === 0 ? (
+                    <> 
                     <Link to="/clients/business" className="navbar-brand">Clients Affaires</Link>
-                ) : props.loggedUser.residentialRole === 1  ? (
+                    <Link to="/clients/residential" className="navbar-brand">Clients Résidentiels</Link>
+                    </> 
+                ) : props.loggedUser.businessRole === 1  && props.loggedUser.blocked === 0? (
+                    <Link to="/clients/business" className="navbar-brand">Clients Affaires</Link>
+                ) : props.loggedUser.residentialRole === 1 && props.loggedUser.blocked === 0 ? (
                     <Link to="/clients/residential" className="navbar-brand">Clients Résidentiels</Link>
                 ) : null
                 }

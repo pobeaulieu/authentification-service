@@ -1,20 +1,23 @@
-import React from "react";
-import PropTypes from 'prop-types';
+import ModifyPassword from "../components/ModifyPassword";
 
 const Home = (props: any) => {
+
     return (
         <div>
-            {props.loggedUser.name ? 'Bonjour ' + props.loggedUser.name : 'Vous n\'êtes pas connecté'}
+            {props.loggedUser.blocked === 2 && <h2 style={{color: "red"}}>Vous devez changer votre mot de passe pour accéder au site</h2>}
+            {props.loggedUser.name ? (
+                <div>
+                    <h2>Bonjour {props.loggedUser.name}</h2>
+                    <br />
+                    <h3>Changer votre mot de passe</h3>
+                    <ModifyPassword onSubmit={() => props.loadUser } userEmail={props.loggedUser.email} isAdminRequest={false}/>
+                </div>
+            ) : <h2>Vous n'êtes pas connecté</h2>
+            }
         </div>
     );
 };
 
-Home.propTypes = {
-    loggedUser: PropTypes.shape({
-        id: PropTypes.number,
-        name: PropTypes.string,
-        email: PropTypes.string,
-    }).isRequired,
-};
+
 
 export default Home;

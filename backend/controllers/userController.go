@@ -5,12 +5,11 @@ import (
 	"backend/models"
 	"backend/utility"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 )
 
 func User(c *fiber.Ctx) error {
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -20,7 +19,7 @@ func User(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
 	utility.LogInfo(user.Name, "user")
 
@@ -28,7 +27,7 @@ func User(c *fiber.Ctx) error {
 }
 
 func Users(c *fiber.Ctx) error {
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -38,7 +37,7 @@ func Users(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
 	var users []models.User
 
@@ -49,7 +48,6 @@ func Users(c *fiber.Ctx) error {
 		})
 	}
 
-	// if doesnt have admin or business role, return an error
 	if user.AdminRole == 0 {
 		c.Status(fiber.StatusUnauthorized)
 		utility.LogInfo(user.Name, "unauthorized")
@@ -61,32 +59,4 @@ func Users(c *fiber.Ctx) error {
 	utility.LogInfo(user.Name, "users")
 
 	return c.JSON(users)
-}
-
-func getUserFromToken(token *jwt.Token) *models.User {
-	// Conversion de type claims à StandardClaims pour avoir le Issuer
-	claims := token.Claims.(*jwt.StandardClaims)
-	var user models.User
-	// get user
-	database.DB.Where("id = ?", claims.Issuer).First(&user)
-
-	return &user
-}
-
-func getPasswordPolicy(user models.User) *models.PasswordPolicy {
-	// Conversion de type claims à StandardClaims pour avoir le Issuer
-	var policy models.PasswordPolicy
-	// get user
-	database.DB.Where("id = ?", user.PasswordPolicyId).First(&policy)
-
-	return &policy
-}
-
-func getLoginPolicy(user models.User) *models.LoginPolicy {
-	// Conversion de type claims à StandardClaims pour avoir le Issuer
-	var policy models.LoginPolicy
-	// get user
-	database.DB.Where("id = ?", user.LoginPolicyId).First(&policy)
-
-	return &policy
 }

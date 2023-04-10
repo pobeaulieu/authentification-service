@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import PropTypes from 'prop-types';
+import { useEffect, useState } from "react";
 
 interface Client {
     id: number;
@@ -14,7 +13,7 @@ const Business = (props: any) => {
 
     useEffect(() => {
         async function fetchClients() {
-            const response = await fetch('http://localhost:8000/api/businessclients', {
+            const response = await fetch('https://localhost:8000/api/businessclients', {
                 headers: {'Content-Type': 'application/json'},
                 credentials: 'include',
             });
@@ -25,10 +24,10 @@ const Business = (props: any) => {
         if(clients.length === 0) {
             fetchClients();
         }
-    }, []);
+    });
 
 
-    if (props.loggedUser.businessRole !== 1 && props.loggedUser.adminRole !== 1) {
+    if (props.loggedUser.businessRole !== 1 && props.loggedUser.adminRole !== 1 && props.loggedUser.blocked !== 0) {
         return (
             <div>
                 Vous n'êtes pas autorisé à accéder à cette page
@@ -63,16 +62,6 @@ const Business = (props: any) => {
             </table>
         </div>
     );
-};
-
-Business.propTypes = {
-    loggedUser: PropTypes.shape({
-        id: PropTypes.number,
-        name: PropTypes.string,
-        email: PropTypes.string,
-        adminRole: PropTypes.number,
-        businessRole: PropTypes.number,
-    }).isRequired,
 };
 
 export default Business;

@@ -9,7 +9,7 @@ import (
 )
 
 func BusinessClients(c *fiber.Ctx) error {
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -19,9 +19,8 @@ func BusinessClients(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
-	// if doesnt have admin or business role, return an error
 	if user.AdminRole == 0 && user.BusinessRole == 0 {
 		c.Status(fiber.StatusUnauthorized)
 		utility.LogInfo(user.Name, "unauthorized")
@@ -45,7 +44,7 @@ func BusinessClients(c *fiber.Ctx) error {
 }
 
 func ResidentialClients(c *fiber.Ctx) error {
-	token, err := VerifyAuthentification(c)
+	token, err := utility.VerifyAuth(c)
 
 	if err != nil {
 		c.Status(fiber.StatusUnauthorized)
@@ -55,9 +54,8 @@ func ResidentialClients(c *fiber.Ctx) error {
 		})
 	}
 
-	user := getUserFromToken(token)
+	user := database.GetUserFromToken(token)
 
-	// if doesnt have admin or business role, return an error
 	if user.AdminRole == 0 && user.ResidentialRole == 0 {
 		c.Status(fiber.StatusUnauthorized)
 		utility.LogInfo(user.Name, "unauthorized")

@@ -14,11 +14,20 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowCredentials: true, // Authentification avec Cookie HTTP seulement.
+		AllowCredentials: true,
 	}))
+
+	// Load SSL certificate and key
+	certFile := "./.cert/cert2.pem"
+	keyFile := "./.cert/key2.pem"
 
 	routes.Setup(app)
 
-	app.Listen(":8000")
+	// Start HTTPS server
+	err := app.ListenTLS(":8000", certFile, keyFile)
+
+	if err != nil {
+		panic(err)
+	}
 
 }

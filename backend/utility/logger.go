@@ -7,7 +7,6 @@ import (
 )
 
 func LogInfo(username string, infoLog string) {
-
 	log := models.Log{
 		UserName: username,
 		LogTime:  time.Now(),

@@ -1,0 +1,69 @@
+@startuml
+participant "authController.go" as c
+
+
+
+participant "authentification.go" as a
+
+
+participant "database.go" as d
+
+
+
+ -> c : GET /api/getcode 
+activate c
+  
+deactivate c
+<-- c : JSON: {\n "positionx": rand.Intn(2),\n  "positiony": rand.Intn(2) \n}
+
+-> c : POST /api/login2fa
+    note left c
+    requestOptions = {
+            email: email,
+            passsword: password,
+            posx: posx,
+            posy: posy,
+            code: code
+        }
+
+    end note
+
+activate c
+
+
+
+
+c-> a: err = Login2FA(email, password, posx, posy, code)
+activate a
+
+a-> d: user = GetUserFromEmail(email)
+
+
+a->a: err = bcrypt.CompareHashAndPassword(user.Password, password);
+
+
+a-> a: err = VerifyTwoFA(posx, posy, code)
+
+note right a
+verify if grid card corresponds
+end note
+
+
+deactivate a
+alt err == nil
+
+c-> a: GenerateJWT(user, c *fiber.Ctx)
+<-- c : JSON: {\n "message": "success" \n}
+
+
+
+else 
+c-> c: c.Status(fiber.StatusInternalServerError)
+<-- c : JSON: {\n "message": err.Error() \n}
+
+end
+
+
+
+deactivate c
+@enduml
